@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#fce4ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KatieTravels 🌠">
+<title>KatieTravels 🌠</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --rose: #f9a8c9;
+    --rose-deep: #e879a0;
+    --rose-light: #fde8f1;
+    --rose-pale: #fef6fa;
+    --blush: #fce4ec;
+    --petal: #fff0f5;
+    --text: #3d1f2e;
+    --text-muted: #9e6b82;
+    --white: #ffffff;
+    --card-border: #f5c6da;
+    --shadow: 0 2px 16px rgba(232,121,160,0.10);
+    --shadow-hover: 0 6px 28px rgba(232,121,160,0.18);
+    --radius: 18px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--petal);
+    color: var(--text);
+    min-height: 100vh;
+    background-image: radial-gradient(circle at 20% 20%, #fde8f1 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, #fce4ec 0%, transparent 50%);
+  }
+
+  header {
+    background: var(--white);
+    border-bottom: 1px solid var(--card-border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 400;
+    box-shadow: 0 2px 12px rgba(232,121,160,0.08);
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--rose-deep); }
+  .logo span { font-style: italic; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .header-count { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); background: var(--rose-light); padding: 4px 12px; border-radius: 20px; }
+  .view-toggle { display: flex; background: var(--rose-light); border-radius: 20px; padding: 3px; gap: 2px; }
+  .view-btn {
+    padding: 5px 14px; border-radius: 17px; border: none; background: transparent;
+    color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+    font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .view-btn.active { background: var(--white); color: var(--rose-deep); box-shadow: 0 1px 6px rgba(232,121,160,0.15); }
+
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 100px; }
+
+  .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .search-wrap input {
+    width: 100%; padding: 12px 16px;
+    border: 1.5px solid var(--card-border); border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    background: var(--white); color: var(--text); outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--rose-deep); box-shadow: 0 0 0 3px rgba(232,121,160,0.12); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+  .filters { display: flex; gap: 7px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 13px; border-radius: 20px; border: 1.5px solid var(--card-border);
+    background: var(--white); color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .filter-btn:hover, .filter-btn.active { background: var(--rose-deep); color: var(--white); border-color: var(--rose-deep); }
+
+  #map-view { display: none; }
+  #map-view.active { display: block; }
+  #map {
+    width: 100%; height: 480px; border-radius: var(--radius);
+    border: 1.5px solid var(--card-border); overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .map-hint { margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 8px; }
+  .map-no-coords {
+    background: var(--white); border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 12px;
+    font-size: 0.83rem; color: var(--text-muted);
+  }
+  .map-no-coords strong { color: var(--rose-deep); }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(232,121,160,0.2) !important;
+    border: 1.5px solid #f5c6da;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .leaflet-popup-tip-container { display: none; }
+  .popup-name { font-family: 'DM Serif Display', serif; font-size: 1rem; color: #3d1f2e; margin-bottom: 5px; }
+  .popup-tags { display: flex; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
+  .popup-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
+  .popup-tag.country { background: #fce4ec; color: #e879a0; }
+  .popup-tag.cat { background: #fef6fa; color: #9e6b82; }
+  .popup-notes { font-size: 0.8rem; color: #9e6b82; font-style: italic; margin-bottom: 8px; line-height: 1.4; }
+  .popup-link { display: inline-block; font-size: 0.78rem; font-weight: 500; color: #e879a0; text-decoration: none; background: #fde8f1; padding: 4px 10px; border-radius: 12px; }
+
+  #list-view.hidden { display: none; }
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+  .empty-state .empty-icon { font-size: 2.8rem; margin-bottom: 10px; }
+  .cards-grid { display: flex; flex-direction: column; gap: 13px; }
+  .card {
+    background: var(--white); border: 1.5px solid var(--card-border);
+    border-radius: var(--radius); padding: 16px 18px;
+    box-shadow: var(--shadow); transition: box-shadow 0.2s, transform 0.2s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+  .card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--text); line-height: 1.3; }
+  .card-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .icon-btn {
+    width: 28px; height: 28px; border-radius: 50%; border: none;
+    background: var(--rose-light); color: var(--rose-deep); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: background 0.15s;
+  }
+  .icon-btn:hover { background: var(--rose); color: white; }
+  .icon-btn.delete:hover { background: #ff8fab; color: white; }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 0.73rem; font-weight: 500; }
+  .tag-country { background: var(--blush); color: var(--rose-deep); border: 1px solid var(--rose-light); }
+  .tag-category { background: var(--rose-pale); color: var(--text-muted); border: 1px solid var(--card-border); }
+  .tag-coords { background: #f0fff4; color: #2d6a4f; border: 1px solid #b7e4c7; font-size: 0.68rem; }
+  .card-notes { font-size: 0.86rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 11px; font-style: italic; }
+  .card-bottom { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .map-link {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 500;
+    color: var(--rose-deep); text-decoration: none; background: var(--rose-light);
+    padding: 5px 11px; border-radius: 20px; transition: background 0.15s;
+  }
+  .map-link:hover { background: var(--rose); color: white; }
+  .show-on-map-btn {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 500;
+    color: #2d6a4f; background: #f0fff4; border: 1px solid #b7e4c7;
+    padding: 5px 11px; border-radius: 20px; cursor: pointer; transition: background 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .show-on-map-btn:hover { background: #d8f3dc; }
+
+  .fab {
+    position: fixed; bottom: 28px; right: 24px; width: 56px; height: 56px;
+    border-radius: 50%; background: var(--rose-deep); color: white; border: none;
+    font-size: 1.6rem; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(232,121,160,0.45);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s; z-index: 200;
+  }
+  .fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(232,121,160,0.55); }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(61,31,46,0.25);
+    backdrop-filter: blur(4px); z-index: 500;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--white); border-radius: 28px 28px 0 0;
+    width: 100%; max-width: 820px; padding: 24px 22px 40px;
+    transform: translateY(30px); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-backdrop.open .modal { transform: translateY(0); }
+  .modal-handle { width: 38px; height: 4px; background: var(--card-border); border-radius: 4px; margin: 0 auto 18px; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--text); margin-bottom: 18px; }
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 0.77rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type="text"], input[type="url"], input[type="number"], select, textarea {
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.93rem;
+    background: var(--rose-pale); color: var(--text); outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s; appearance: none; -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--rose-deep); box-shadow: 0 0 0 3px rgba(232,121,160,0.12); background: var(--white);
+  }
+  textarea { resize: vertical; min-height: 75px; }
+  .select-wrap { position: relative; }
+  .select-wrap::after { content:'⌄'; position:absolute; right:13px; top:50%; transform:translateY(-50%); color:var(--rose-deep); pointer-events:none; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .section-label {
+    font-size: 0.72rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-muted); margin: 18px 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .coords-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5; background: var(--rose-pale); padding: 10px 12px; border-radius: var(--radius-sm); }
+  .btn-primary {
+    width: 100%; padding: 13px; background: var(--rose-deep); color: white; border: none;
+    border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.93rem;
+    font-weight: 500; cursor: pointer; margin-top: 6px; transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: #d4608a; transform: translateY(-1px); }
+  .btn-secondary {
+    width: 100%; padding: 12px; background: transparent; color: var(--text-muted);
+    border: 1.5px solid var(--card-border); border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; margin-top: 6px; transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: var(--rose-pale); }
+
+  @media (min-width: 600px) {
+    .modal-backdrop { align-items: center; padding: 20px; }
+    .modal { border-radius: 28px; max-height: 88vh; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KatieTravels <span>🌠</span></div>
+  <div class="header-right">
+    <div class="view-toggle">
+      <button class="view-btn active" id="btnList" onclick="switchView('list')">🗂 List</button>
+      <button class="view-btn" id="btnMap" onclick="switchView('map')">🗺 Map</button>
+    </div>
+    <div class="header-count" id="headerCount">0 places</div>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search places, notes…">
+    </div>
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="country:Korea">🇰🇷 Korea</button>
+      <button class="filter-btn" data-filter="country:Taiwan">🇹🇼 Taiwan</button>
+      <button class="filter-btn" data-filter="country:Hong Kong">🇭🇰 Hong Kong</button>
+      <button class="filter-btn" data-filter="country:China">🇨🇳 China</button>
+      <button class="filter-btn" data-filter="cat:Restaurant">🍜 Food</button>
+      <button class="filter-btn" data-filter="cat:Shopping">🛍️ Shopping</button>
+      <button class="filter-btn" data-filter="cat:Attraction">🏯 Sights</button>
+      <button class="filter-btn" data-filter="cat:Café">☕ Cafés</button>
+    </div>
+  </div>
+
+  <div id="map-view">
+    <div id="map"></div>
+    <div class="map-hint">Pins show places with coordinates added. Tap any pin for details.</div>
+    <div id="map-no-coords" class="map-no-coords" style="display:none">
+      <strong>Some places are missing coordinates.</strong> Edit them and add a latitude & longitude to show them here.
+    </div>
+  </div>
+
+  <div id="list-view">
+    <div id="cardsList" class="cards-grid"></div>
+  </div>
+</main>
+
+<button class="fab" id="fabBtn">＋</button>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">Add a Place 🌸</div>
+
+    <div class="form-group">
+      <label>Place Name *</label>
+      <input type="text" id="fieldName" placeholder="e.g. Din Tai Fung">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Country *</label>
+        <div class="select-wrap">
+          <select id="fieldCountry">
+            <option value="">Select…</option>
+            <option value="Korea">🇰🇷 Korea</option>
+            <option value="Taiwan">🇹🇼 Taiwan</option>
+            <option value="Hong Kong">🇭🇰 Hong Kong</option>
+            <option value="China">🇨🇳 China</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Category *</label>
+        <div class="select-wrap">
+          <select id="fieldCategory">
+            <option value="">Select…</option>
+            <option value="Restaurant">🍜 Restaurant</option>
+            <option value="Shopping">🛍️ Shopping</option>
+            <option value="Attraction">🏯 Attraction</option>
+            <option value="Café">☕ Café</option>
+            <option value="Hotel">🏨 Hotel</option>
+            <option value="Other">✨ Other</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="fieldNotes" placeholder="Tips, reservations, hours…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Map Link <span style="font-weight:300;text-transform:none">(optional)</span></label>
+      <input type="url" id="fieldLink" placeholder="Paste Naver / Google Maps / Amap URL">
+    </div>
+
+    <div class="section-label">📍 Coordinates <span style="font-weight:300;text-transform:none;font-size:0.68rem">— to show this place on your map</span></div>
+    <div class="form-group">
+      <label>Paste a share link to auto-extract 🪄</label>
+      <div style="display:flex;gap:8px">
+        <input type="url" id="fieldExtractUrl" placeholder="Paste Google Maps / Naver / Amap share link…" style="flex:1">
+        <button type="button" id="extractBtn" onclick="extractCoords()" style="padding:0 16px;background:var(--rose-deep);color:white;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0">Extract</button>
+      </div>
+      <div id="extractStatus" style="font-size:0.75rem;margin-top:6px;min-height:16px;color:var(--text-muted)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Latitude</label>
+        <input type="number" id="fieldLat" placeholder="e.g. 37.5665" step="any">
+      </div>
+      <div class="form-group">
+        <label>Longitude</label>
+        <input type="number" id="fieldLng" placeholder="e.g. 126.9780" step="any">
+      </div>
+    </div>
+    <div class="coords-hint">
+      💡 <strong>On mobile:</strong> Open Google Maps → find your place → tap <strong>Share</strong> → copy the link → paste above and tap Extract.<br><br>
+      Works with Google Maps, Naver Maps, and Amap share links. Or type coordinates manually if you have them.
+    </div>
+
+    <button class="btn-primary" id="saveBtn">Save Place 🌸</button>
+    <button class="btn-secondary" id="cancelBtn">Cancel</button>
+  </div>
+</div>
+
+<script>
+const MAP_LABELS = { Korea:'Naver Maps', Taiwan:'Google Maps', 'Hong Kong':'Google Maps', China:'Amap' };
+const CAT_ICONS  = { Restaurant:'🍜', Shopping:'🛍️', Attraction:'🏯', Café:'☕', Hotel:'🏨', Other:'✨' };
+const FLAG       = { Korea:'🇰🇷', Taiwan:'🇹🇼', 'Hong Kong':'🇭🇰', China:'🇨🇳' };
+
+let places = [], editId = null, activeFilter = 'all', searchQuery = '', currentView = 'list';
+let leafletMap = null, markers = [];
+
+function load() {
+  try { places = JSON.parse(localStorage.getItem('asia_places_v2') || '[]'); } catch { places = []; }
+  if (!places.length) seedData();
+}
+function save() { localStorage.setItem('asia_places_v2', JSON.stringify(places)); }
+function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function seedData() {
+  places = [
+    { id:uid(), name:'Din Tai Fung (信義)', country:'Taiwan', category:'Restaurant', notes:'Must get the XLB! Go early to avoid the queue 🥟', link:'https://maps.google.com', lat:25.0330, lng:121.5654, created:Date.now() },
+    { id:uid(), name:'Gyeongbokgung Palace', country:'Korea', category:'Attraction', notes:'Wear hanbok for free entry! Morning light is gorgeous 📸', link:'', lat:37.5796, lng:126.9770, created:Date.now()-1 },
+    { id:uid(), name:'COEX Mall', country:'Korea', category:'Shopping', notes:'Huge underground mall — great for rainy days 🌧️', link:'', lat:37.5125, lng:127.0594, created:Date.now()-2 },
+    { id:uid(), name:'Yuyuan Garden', country:'China', category:'Attraction', notes:'Classic Ming dynasty garden. Go weekday morning to beat crowds.', link:'', lat:31.2267, lng:121.4916, created:Date.now()-3 },
+    { id:uid(), name:'Honolulu Coffee', country:'Hong Kong', category:'Café', notes:'Famous for egg tarts and milk tea ☕', link:'https://maps.google.com', lat:22.2793, lng:114.1628, created:Date.now()-4 },
+  ];
+  save();
+}
+
+function switchView(v) {
+  currentView = v;
+  document.getElementById('list-view').classList.toggle('hidden', v === 'map');
+  document.getElementById('map-view').classList.toggle('active', v === 'map');
+  document.getElementById('btnList').classList.toggle('active', v === 'list');
+  document.getElementById('btnMap').classList.toggle('active', v === 'map');
+  if (v === 'map') { initMap(); renderMap(); }
+}
+
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map('map').setView([30, 115], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }).addTo(leafletMap);
+}
+
+function makePinIcon(emoji) {
+  return L.divIcon({
+    html: `<div style="background:white;border:2px solid #e879a0;border-radius:50% 50% 50% 0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(232,121,160,0.35);transform:rotate(-45deg)"><span style="transform:rotate(45deg);line-height:1">${emoji}</span></div>`,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -38]
+  });
+}
+
+function renderMap() {
+  if (!leafletMap) return;
+  markers.forEach(m => leafletMap.removeLayer(m));
+  markers = [];
+  const filtered = getFiltered();
+  const withCoords = filtered.filter(p => p.lat && p.lng);
+  const withoutCoords = filtered.filter(p => !p.lat || !p.lng);
+  document.getElementById('map-no-coords').style.display = withoutCoords.length ? 'block' : 'none';
+  if (!withCoords.length) return;
+  const bounds = [];
+  withCoords.forEach(p => {
+    const icon = makePinIcon(CAT_ICONS[p.category] || '📍');
+    const popup = `<div style="min-width:175px;padding:2px">
+      <div class="popup-name">${esc(p.name)}</div>
+      <div class="popup-tags">
+        <span class="popup-tag country">${FLAG[p.country]||''} ${esc(p.country)}</span>
+        <span class="popup-tag cat">${CAT_ICONS[p.category]||'✨'} ${esc(p.category)}</span>
+      </div>
+      ${p.notes ? `<div class="popup-notes">${esc(p.notes)}</div>` : ''}
+      ${p.link ? `<a class="popup-link" href="${esc(p.link)}" target="_blank" rel="noopener">Open in ${MAP_LABELS[p.country]||'Maps'}</a>` : ''}
+    </div>`;
+    const m = L.marker([p.lat, p.lng], { icon }).addTo(leafletMap).bindPopup(popup, { maxWidth: 260 });
+    markers.push(m);
+    bounds.push([p.lat, p.lng]);
+  });
+  if (bounds.length === 1) leafletMap.setView(bounds[0], 15);
+  else leafletMap.fitBounds(bounds, { padding: [50, 50] });
+}
+
+function getFiltered() {
+  const search = searchQuery.toLowerCase();
+  return places.filter(p => {
+    const ok = !search || p.name.toLowerCase().includes(search) || (p.notes||'').toLowerCase().includes(search);
+    if (!ok) return false;
+    if (activeFilter === 'all') return true;
+    if (activeFilter.startsWith('country:')) return p.country === activeFilter.slice(8);
+    if (activeFilter.startsWith('cat:'))     return p.category === activeFilter.slice(4);
+    return true;
+  }).sort((a,b) => b.created - a.created);
+}
+
+function render() {
+  document.getElementById('headerCount').textContent = `${places.length} place${places.length!==1?'s':''}`;
+  if (currentView === 'map') { renderMap(); return; }
+  const filtered = getFiltered();
+  const list = document.getElementById('cardsList');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🌸</div><p>${places.length?'No places match your search.':'No places yet — add your first!'}</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map((p,i) => `
+    <div class="card" style="animation-delay:${i*35}ms">
+      <div class="card-top">
+        <div class="card-name">${esc(p.name)}</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick="openEdit('${p.id}')" title="Edit">✏️</button>
+          <button class="icon-btn delete" onclick="deletePlace('${p.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>
+      <div class="card-tags">
+        <span class="tag tag-country">${FLAG[p.country]||''} ${esc(p.country)}</span>
+        <span class="tag tag-category">${CAT_ICONS[p.category]||'✨'} ${esc(p.category)}</span>
+        ${(p.lat&&p.lng)?'<span class="tag tag-coords">📍 mapped</span>':''}
+      </div>
+      ${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}
+      <div class="card-bottom">
+        ${p.link?`<a class="map-link" href="${esc(p.link)}" target="_blank" rel="noopener">🗺 ${MAP_LABELS[p.country]||'Maps'}</a>`:''}
+        ${(p.lat&&p.lng)?`<button class="show-on-map-btn" onclick="showOnMap('${p.id}')">📍 Show on map</button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function showOnMap(id) {
+  switchView('map');
+  setTimeout(() => {
+    const p = places.find(x=>x.id===id);
+    if (!p||!p.lat||!p.lng) return;
+    leafletMap.setView([p.lat, p.lng], 16);
+    const m = markers.find(mk => {
+      const ll = mk.getLatLng();
+      return Math.abs(ll.lat-p.lat)<0.0001 && Math.abs(ll.lng-p.lng)<0.0001;
+    });
+    if (m) m.openPopup();
+  }, 300);
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function extractCoords() {
+  const raw = document.getElementById('fieldExtractUrl').value.trim();
+  const status = document.getElementById('extractStatus');
+  if (!raw) { status.style.color='#e879a0'; status.textContent='Please paste a link first.'; return; }
+  status.style.color='var(--text-muted)'; status.textContent='Extracting…';
+
+  // Try to parse coords directly from the URL string (works for most full URLs)
+  function tryParse(url) {
+    // Google Maps: /@lat,lng or /place/.../@lat,lng or ?q=lat,lng or ll=lat,lng
+    let m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    m = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    m = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    // Naver Maps: lat=&lng= or ?c=lng,lat
+    m = url.match(/[?&]lat=(-?\d+\.\d+).*?[?&]lng=(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    m = url.match(/[?&]lng=(-?\d+\.\d+).*?[?&]lat=(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[2]), parseFloat(m[1])];
+    // Amap: q=name@lat,lng or center=lng,lat
+    m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    // Generic: two consecutive decimal numbers that look like coords
+    m = url.match(/(-?[1-9]\d?\.\d{3,}),(-?1?\d{1,2}\.\d{3,})/);
+    if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+    return null;
+  }
+
+  let coords = tryParse(raw);
+  if (coords) {
+    document.getElementById('fieldLat').value = coords[0];
+    document.getElementById('fieldLng').value = coords[1];
+    status.style.color='#2d6a4f'; status.textContent='✓ Coordinates extracted!';
+    return;
+  }
+
+  // If it's a short link (maps.app.goo.gl, naver.me, etc.) try to follow it via a CORS proxy
+  try {
+    const proxy = 'https://corsproxy.io/?' + encodeURIComponent(raw);
+    const res = await fetch(proxy, { redirect: 'follow' });
+    const finalUrl = res.url;
+    coords = tryParse(finalUrl) || tryParse(await res.text().catch(()=>''));
+    if (coords) {
+      document.getElementById('fieldLat').value = coords[0];
+      document.getElementById('fieldLng').value = coords[1];
+      status.style.color='#2d6a4f'; status.textContent='✓ Coordinates extracted!';
+      return;
+    }
+  } catch(e) {}
+
+  status.style.color='#e879a0';
+  status.textContent='Couldn\'t extract automatically — try copying the full URL from your browser instead of a short link.';
+}
+
+function openModal(id) {
+  editId = id||null;
+  const p = id ? places.find(x=>x.id===id) : null;
+  document.getElementById('modalTitle').textContent = id ? 'Edit Place ✏️' : 'Add a Place 🌸';
+  document.getElementById('fieldName').value     = p?.name||'';
+  document.getElementById('fieldCountry').value  = p?.country||'';
+  document.getElementById('fieldCategory').value = p?.category||'';
+  document.getElementById('fieldNotes').value    = p?.notes||'';
+  document.getElementById('fieldLink').value     = p?.link||'';
+  document.getElementById('fieldLat').value      = p?.lat||'';
+  document.getElementById('fieldLng').value      = p?.lng||'';
+  document.getElementById('fieldExtractUrl').value = '';
+  document.getElementById('extractStatus').textContent = '';
+  document.getElementById('modalBackdrop').classList.add('open');
+  setTimeout(()=>document.getElementById('fieldName').focus(),300);
+}
+function closeModal() { document.getElementById('modalBackdrop').classList.remove('open'); }
+
+function savePlace() {
+  const name     = document.getElementById('fieldName').value.trim();
+  const country  = document.getElementById('fieldCountry').value;
+  const category = document.getElementById('fieldCategory').value;
+  const notes    = document.getElementById('fieldNotes').value.trim();
+  const link     = document.getElementById('fieldLink').value.trim();
+  const latRaw   = document.getElementById('fieldLat').value.trim();
+  const lngRaw   = document.getElementById('fieldLng').value.trim();
+  const lat      = latRaw ? parseFloat(latRaw) : null;
+  const lng      = lngRaw ? parseFloat(lngRaw) : null;
+  if (!name||!country||!category) { alert('Please fill in Name, Country and Category 🌸'); return; }
+  if ((latRaw&&isNaN(lat))||(lngRaw&&isNaN(lng))) { alert('Coordinates must be numbers (e.g. 37.5665)'); return; }
+  if (editId) {
+    const idx = places.findIndex(p=>p.id===editId);
+    if (idx>-1) places[idx] = {...places[idx], name, country, category, notes, link, lat, lng};
+  } else {
+    places.unshift({id:uid(), name, country, category, notes, link, lat, lng, created:Date.now()});
+  }
+  save(); closeModal(); render();
+}
+
+function deletePlace(id) {
+  if (!confirm('Remove this place?')) return;
+  places = places.filter(p=>p.id!==id);
+  save(); render();
+}
+function openEdit(id) { openModal(id); }
+
+document.getElementById('fabBtn').addEventListener('click', ()=>openModal());
+document.getElementById('saveBtn').addEventListener('click', savePlace);
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+document.getElementById('modalBackdrop').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('searchInput').addEventListener('input', e=>{ searchQuery=e.target.value; render(); });
+document.getElementById('filters').addEventListener('click', e=>{
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  render();
+  if (currentView==='map') renderMap();
+});
+
+if ('serviceWorker' in navigator) {
+  const sw = `const C='asia-v2';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll([self.location.origin+self.location.pathname]).catch(()=>{}))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{caches.open(C).then(c=>c.put(e.request,res.clone()));return res;}).catch(()=>new Response('Offline')))));`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+}
+
+load(); render();
+</script>
+</body>
+</html>
